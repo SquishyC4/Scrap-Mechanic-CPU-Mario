@@ -18,8 +18,8 @@ class Assembler:
 
     def lex(self, path):
         tokens = Preprocessor.tokenise(path)
-        code, defines, labels = Preprocessor.create_contex_tables(tokens)
-        self.file = File(code, defines, labels)
+        code, defines = Preprocessor.create_contex_tables(tokens)
+        self.file = File(code, defines)
 
     @staticmethod
     def file_path(file_name):
@@ -135,7 +135,7 @@ class Assembler:
             bswp = False
 
             for k, operand in enumerate(line[1:]):
-                definition = self.file.all.get(operand)
+                definition = self.file.defines.get(operand)
                 new_operand = ''
                 if definition == None:
                     new_operand = operand
@@ -280,9 +280,9 @@ class Assembler:
 
 
 class File:
-    def __init__(self, code = [], defines = {}, labels = {}) -> None:
+    def __init__(self, code = [], defines = {}) -> None:
         self.code = code
-        self.all = defines | labels
+        self.defines = defines 
 
 def Timer(func) -> None:
     def wrapper(*args, **kwargs):
