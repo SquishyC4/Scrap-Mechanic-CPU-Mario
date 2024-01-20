@@ -1,5 +1,3 @@
-from Assembler import Timer
-
 def tokenise(path) -> list:
     with open(path, 'r') as f:
         Tokenised = []
