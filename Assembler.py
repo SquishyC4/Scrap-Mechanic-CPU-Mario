@@ -282,14 +282,7 @@ class Assembler:
 class File:
     def __init__(self, code = [], defines = {}, labels = {}) -> None:
         self.code = code
-        self.defines = defines
-        self.labels = labels
         self.all = defines | labels
-    def search_defines(self, word: str) -> str:
-        return self.defines.get(word)
-    def search_labels(self, label: str) -> int:
-        return self.labels.get(label)
-
 
 def Timer(func) -> None:
     def wrapper(*args, **kwargs):
