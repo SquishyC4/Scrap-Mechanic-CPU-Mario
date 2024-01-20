@@ -1,3 +1,5 @@
+; to be imported into test.txt for assembly
+
 #define:
     dest, [45475]
     mario_x, [4100]
@@ -12,8 +14,8 @@ mult:
     ret
 
 abs:
-    mov r1, [4500] ; -ve example 
-    cwd r2, r1  ; sign extend
+    mov r1, [4500]     ; -ve example 
+    cwd r2, r1         ; sign extend
     xor r1, r1, r2
     sub dest, r1, r2
     ret
