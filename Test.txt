@@ -1,3 +1,5 @@
+; example code in the current cpu's assembly showing off the assemblers functions
+
 #include Functions.txt
 
 #define:
