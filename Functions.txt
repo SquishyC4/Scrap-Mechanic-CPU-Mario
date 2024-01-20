@@ -1,0 +1,20 @@
+#define:
+    dest, [45475]
+    mario_x, [4100]
+
+Example:
+    add r30, r15, 8569
+    ret
+
+mult:
+    imul r1, r2
+    cmb r3, mxl, mxh
+    ret
+
+abs:
+    mov r1, [4500] ; -ve example 
+    cwd r2, r1  ; sign extend
+    xor r1, r1, r2
+    sub dest, r1, r2
+    ret
+

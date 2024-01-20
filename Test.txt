@@ -1,0 +1,28 @@
+#include Functions.txt
+
+#define:
+    valA, 42124
+    valB, [0xff]
+    mxh, r31
+    mxl, r30
+
+Imul16Bit:
+    mov r1, valA,       ; A
+    mov r2, valB        ; B
+    sar 8, r3, r1       ; upper 8 bits of A in r3
+    sar 8, r4, r2       ; upper 8 bits of B in r4
+    imul r1, r2         ; lower 8x8
+    cmb r5, mxl, mxh
+    imul r3, r4         ; upper 8x8
+    cmb r6, mxl, mxh
+    imul r3, r2         ; upper A lower B
+    add r6, r6, mxh
+    sal 8, r7, mxl
+    add r5, r5, r7
+    adc r6, r6, r0
+    imul r4, r1         ; upper B lower A
+    add r6, r6, mxh
+    sal 8, r7, mxl
+    add r5, r5, r7
+    adc r6, r6, r0
+    call abs
