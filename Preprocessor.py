@@ -22,10 +22,9 @@ def search_includes(tokens):
         i += 1
     return includes
 
-def create_contex_tables(tokens) -> (list, dict, dict):
+def create_contex_tables(tokens) -> (list, dict):
     code = []
     defines = {}
-    labels = {}
     line_count = 0
     i = 0
     while i < len(tokens):
@@ -42,8 +41,8 @@ def create_contex_tables(tokens) -> (list, dict, dict):
                     i += 1
                 continue
         elif element[0] == '.':
-            labels.update({element[0:]:line_count})
+            defines.update({element[0:]:line_count})
         elif element[-1] == ':':
-            labels.update({element[:-1]:line_count})
+            defines.update({element[:-1]:line_count})
         i += 1
     return code, defines, labels
