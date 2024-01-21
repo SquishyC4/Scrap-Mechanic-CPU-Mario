@@ -158,7 +158,23 @@ Collision:
     jmp Wall
 
 .resolve_collison        ; tbh i cant remember how this works exactly, but it does
+    ; r1 has player corner x
+    ; r2 has player corer y
+    ; r10 = player_x previous
+    ; r11 = player_y previous
+    ; r12 = block_x
+    ; r13 = block_y
+    ; r14 = x_vel
+    ; r15 = y_vel
 
+    mov r10, prev_player_x
+    mov r11, prev_player_y
+    mov r12, curr_player_x
+    mov r13, curr_player_y
+    and r12, r12, 0b1111111111111000
+    and r13, r13, 011111111111111000
+    mov r14, player_x_vel
+    mov r15, player_y_vel
 
 
 Render_Scene:
