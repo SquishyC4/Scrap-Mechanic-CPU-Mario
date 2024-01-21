@@ -18,8 +18,8 @@ class Assembler:
 
     def lex(self, path):
         tokens = Preprocessor.tokenise(path)
-        code, defines, labels = Preprocessor.create_contex_tables(tokens)
-        self.file = File(code, defines, labels)
+        code, defines = Preprocessor.create_contex_tables(tokens)
+        self.file = File(code, defines)
 
     @staticmethod
     def file_path(file_name):
@@ -121,6 +121,8 @@ class Assembler:
             expected = self.expected_op_number(opcode)
             op_number = len(line) - 1
 
+            # check the line has the correct number of operands
+            
             if expected == None:
                 self.Error1(line_num, strline, f"Error: Opcode \'{opcode}\' could not be resolved.")
             elif expected != op_number:
@@ -134,8 +136,12 @@ class Assembler:
             new = []
             bswp = False
 
+            # go through and replace any arguments with their definition
+            # then record information about the type of operands passed
+            # translate operand into a number in preperation to be combined into machine code
+            
             for k, operand in enumerate(line[1:]):
-                definition = self.file.all.get(operand)
+                definition = self.file.defines.get(operand)
                 new_operand = ''
                 if definition == None:
                     new_operand = operand
@@ -205,7 +211,7 @@ class Assembler:
                 op_map = 'rr'
             elif opcode == 'mov':
                 if op_map == 'rr':
-                    pass
+                    pass                    # nothing occurs as mov reg reg is the same as an orr instructions which has opcode 0
                 elif op_map == 'ri':
                     machine_word_1 += 1024  # ori
                 elif op_map == 'mr':
@@ -238,7 +244,7 @@ class Assembler:
                 start = 1
 
             for indx, op in enumerate(interpreted):
-                if start + indx >= 2:
+                if (start + indx) >= 2:
                     machine_word_2 += op << 11
                 else:
                     if (indx + start) == 0:
@@ -280,16 +286,9 @@ class Assembler:
 
 
 class File:
-    def __init__(self, code = [], defines = {}, labels = {}) -> None:
+    def __init__(self, code = [], defines = {}) -> None:
         self.code = code
-        self.defines = defines
-        self.labels = labels
-        self.all = defines | labels
-    def search_defines(self, word: str) -> str:
-        return self.defines.get(word)
-    def search_labels(self, label: str) -> int:
-        return self.labels.get(label)
-
+        self.defines = defines 
 
 def Timer(func) -> None:
     def wrapper(*args, **kwargs):

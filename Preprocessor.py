@@ -22,28 +22,27 @@ def search_includes(tokens):
         i += 1
     return includes
 
-def create_contex_tables(tokens) -> (list, dict, dict):
+def create_contex_tables(tokens) -> (list, dict):
     code = []
     defines = {}
-    labels = {}
     line_count = 0
     i = 0
     while i < len(tokens):
         line = tokens[i]
         element = line[0]
-        if element[0] != '#' and element[0] != '.' and element[-1] != ':':
-            code.append(line)
-            line_count += 1
-        elif element[0] == '#':
+        if element[0] == '#':
             if element[1] == 'd':     #define
                 i += 1
                 while i < len(tokens) and tokens[i][0][-1] != ':':
                     defines.update({tokens[i][0]:tokens[i][1]})
                     i += 1
                 continue
-        elif element[0] == '.':
-            labels.update({element[0:]:line_count})
-        elif element[-1] == ':':
-            labels.update({element[:-1]:line_count})
+        elif element[0] == '.':    # lables
+            defines.update({element[0:]:line_count})
+        elif element[-1] == ':':    # functions
+            defines.update({element[:-1]:line_count})
+        else:
+            code.append(line)
+            line_count += 1
         i += 1
-    return code, defines, labels
+    return code, defines
