@@ -169,13 +169,210 @@ Collision:
 
     mov r10, prev_player_x
     mov r11, prev_player_y
-    mov r12, curr_player_x
-    mov r13, curr_player_y
+    mov r12, curr_player_x        ; block x
+    mov r13, curr_player_y        ; block y
     and r12, r12, 0b1111111111111000
     and r13, r13, 011111111111111000
     mov r14, player_x_vel
     mov r15, player_y_vel
 
+    sub r0, r0, r14
+    jif neg, .+x
+    sub r0, r0, r15
+    jif neg, -x+y
+    add r12, r12, 7
+    add r13, r13, 7
+
+    sub r20, r13, r10
+    imul r20, r14
+    mov r11, mxl
+    sub r21, r3, r11
+    imul r21, r15
+    sub r7, r11, mxl
+
+    jif neg .--side
+
+    sar 3, r7, r1
+    add r7, r7, 256
+    lfp r7, r7
+    sar 3, r6, r2
+    add r7, r6, r7
+    add r7, r7, 3648
+    lfp r7, r7
+    sub r0, r0, r7
+    
+    jif n .resolve_x
+    mov r31, 1
+    mov grounded, r31
+    jmp .resolve_y
+
+.--side
+    sar 3, r7, r1
+    add r7, r7, 256
+    lfp r7, r7
+    sar 3, r6, r2
+    add r7, r6, r7
+    add r7, r7, 3648
+    lfp r7, r7
+    sub r0, r0, r7
+    
+    jif z, .resolve_x
+    mov r31, 1
+    mov grounded, r31
+    jmp .resolve_y
+
+.-x+y
+    add r12, r12, 7
+    
+    sub r20, r13, r10
+    imul r20, r14
+    mov r11, mxl
+    sub r21, r3, r11
+    imul r21, r15
+    sub r7, r11, mxl
+
+    jif n .-+bottom
+    
+    sar 3, r7, r1
+    add r7, r7, 256
+    lfp r7, r7
+    sar 3, r6, r2
+    add r7, r6, r7
+    add r7, r7, 3648
+    lfp r7, r7
+    sub r0, r0, r7
+    
+    jif z, .resolve_x
+    jmp .resolve_y
+
+.-+bottom
+    sar 3, r7, r1
+    add r7, r7, 256
+    lfp r7, r7
+    sar 3, r6, r2
+    add r7, r6, r7
+    add r7, r7, 3648
+    lfp r7, r7
+    sub r0, r0, r7
+    
+    jif z, .resolve_x
+    jmp .resolve_y
+
+.+x
+    sub r0, r0, r15
+    jif neg, .+x+y
+.+x-y
+    add r13, r13, 7
+    
+    sub r20, r13, r10
+    imul r20, r14
+    mov r11, mxl
+    sub r21, r3, r11
+    imul r21, r15
+    sub r7, r11, mxl
+
+    jif neg, .+-top
+
+    sar 3, r7, r1
+    add r7, r7, 256
+    lfp r7, r7
+    sar 3, r6, r2
+    add r7, r6, r7
+    add r7, r7, 3648
+    lfp r7, r7
+    sub r0, r0, r7
+
+    jif z, .resolve_x
+    mov r31, 1
+    mov grounded, r31
+    jmp .resolve_y
+
+.+-top
+    sar 3, r7, r1
+    add r7, r7, 256
+    lfp r7, r7
+    sar 3, r6, r2
+    add r7, r6, r7
+    add r7, r7, 3648
+    lfp r7, r7
+    sub r0, r0, r7
+
+    jif n, .resolve_x
+    mov r31, 1
+    mov grounded, r31
+    jmp .resolve_y
+
+.+x+y
+    sub r20, r13, r10
+    imul r20, r14
+    mov r11, mxl
+    sub r21, r3, r11
+    imul r21, r15
+    sub r7, r11, mxl
+
+    jif neg, .++side
+    
+    sar 3, r7, r1
+    add r7, r7, 256
+    lfp r7, r7
+    sar 3, r6, r2
+    add r7, r6, r7
+    add r7, r7, 3648
+    lfp r7, r7
+    sub r0, r0, r7
+    jif neg, .resolve_x
+    jmp .resolve_y
+
+.++side
+    sar 3, r7, r1
+    add r7, r7, 256
+    lfp r7, r7
+    sar 3, r6, r2
+    add r7, r6, r7
+    add r7, r7, 3648
+    lfp r7, r7
+    sub r0, r0, r7
+    jif z, .resolve_x
+    jmp .resolve_y
+    
+.resolve_x
+    sub r31, r12, r1
+    add r31, curr_player_x, r31
+    mov curr_player_x, r31
+    mov player_x_vel, r0
+    jmp Wall
+
+.resolve_y
+    sub r31, r13, r2
+    add r31, curr_player_y, r31
+    mov curr_player_y, r31
+    mov player_y_vel, r0
+    jmp Wall
+
+Wall:
+    mov r1, curr-player_x
+    mov r2, wall_x_pixels
+    sub r0, r1, r2
+    jif neg, .left_wall
+    add r3, r2, 33
+    sub r0, r3, r1
+    jif neg, .update_wall
+    jmp .rend_scene
+.left_wall
+    cad curr_player_x, r2, r0
+    jmp .wall_block_updt
+.updt_wall
+    sub r32, r3, r1
+    add r2, r2, r4
+    mov wall_x_pixels, r2
+
+.wall_block_updt
+    sar 3, r2, r2
+    mov wall_x_blocks
+    mov r3, curr_player_y
+    sar 3, r3, r3
+    mov wall_y_blocks, r3
+    jmp Render_Scene
 
 Render_Scene:
     mov r1, 0b0100000000000101   ; setup gpu instruction
@@ -214,7 +411,7 @@ Render_Scene:
 .call_gpu
     sub r7, r7, r1               ; extract block id and store to port for gpu
     pst p2, r7
-    sal 3, r10, r8
+    sal 3, r10, r8               ; compute block position on screen
     sub r10, r10, wall_y_pixels
     sal 3, r11, r1
     sub r11, r11, wall_x_pixels
