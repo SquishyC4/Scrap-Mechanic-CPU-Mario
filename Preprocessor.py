@@ -30,10 +30,7 @@ def create_contex_tables(tokens) -> (list, dict):
     while i < len(tokens):
         line = tokens[i]
         element = line[0]
-        if element[0] != '#' and element[0] != '.' and element[-1] != ':':
-            code.append(line)
-            line_count += 1
-        elif element[0] == '#':
+        if element[0] == '#':
             if element[1] == 'd':     #define
                 i += 1
                 while i < len(tokens) and tokens[i][0][-1] != ':':
@@ -44,5 +41,8 @@ def create_contex_tables(tokens) -> (list, dict):
             defines.update({element[0:]:line_count})
         elif element[-1] == ':':
             defines.update({element[:-1]:line_count})
+        else:
+            code.append(line)
+            line_count += 1
         i += 1
     return code, defines
