@@ -3,3 +3,4 @@ This is a project attempting to make a CPU and 'GPU' type device capable of play
 
 # Note
 **Mario Main** is using an old old cpus assembly and will be re-written for the current cpus assembly soon (ish)
+**Mario Main New** is labeled as **.asm** only for the pretty colours :)
