@@ -37,9 +37,9 @@ def create_contex_tables(tokens) -> (list, dict):
                     defines.update({tokens[i][0]:tokens[i][1]})
                     i += 1
                 continue
-        elif element[0] == '.':
+        elif element[0] == '.':    # lables
             defines.update({element[0:]:line_count})
-        elif element[-1] == ':':
+        elif element[-1] == ':':    # functions
             defines.update({element[:-1]:line_count})
         else:
             code.append(line)
