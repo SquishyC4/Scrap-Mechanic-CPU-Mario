@@ -182,13 +182,16 @@ Render_Scene:
     sub r31, r8, r4              ; check if its greater then y limit
     jif neg, .L1                 ; break from inner loop    
     sub r31, r8, wall_y_blocks   ; check if its less than base height
-    jif pos, .L3                 ; skip draw
+    jif neg, .L3                 ; skip draw
     jmp .call_gpu
 .L3
     add r6, r6, r1
+.L2
     sub r31, r3, r6
     jif pos, .L4
+.L1
     add r1, r1, 1
+.L0    
     sub r31, r1, r2
     jif neg, .L5
     jmp .update_screen
