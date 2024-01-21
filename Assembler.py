@@ -159,9 +159,12 @@ class Assembler:
                     op_map += 'i'
                     continue
                 elif new_operand[0] in {'0','1','2','3','4','5','6','7','8','9'}:
-                    interpreted.append(self.to_int(new_operand))
-                    op_map += 'i'
-                    continue
+                    try:
+                        interpreted.append(self.to_int(new_operand))
+                        op_map += 'i'
+                        continue
+                    except:
+                        self.Error1(line_num, strline, f"Error: Operand \'{operand}\' could not be resolved.")
                 elif new_operand[0] == '[' and new_operand[-1] == ']':
                     if k == 0:
                         bswp = True
