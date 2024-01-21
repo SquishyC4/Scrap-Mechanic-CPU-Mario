@@ -28,27 +28,27 @@ Main:
 
 
 Render_Scene:
-    mov r1, 0b0100000000000101    # setup gpu instruction
-                                  # all blocks can assume 40 pixels
+    mov r1, 0b0100000000000101    ; setup gpu instruction
+                                  ; all blocks can assume 40 pixels
     pst p1, r1
-    mov r1, wall_x_blocks    # loop i vaiable
-    add r2, r1, 12           # max i value
+    mov r1, wall_x_blocks    ; loop i vaiable
+    add r2, r1, 12           ; max i value
     lod r3, wall_y_blocks
-    add r4, r3, 8            # max j
+    add r4, r3, 8            ; max j
 .L5
     add r6, r1, 256
-    lfp r6, r6               # x13 + 512 --> start of list in render 2x2 matrix
-    lfp r5, r6               # number of blocks t orender
+    lfp r6, r6               ; x13 + 512 --> start of list in render 2x2 matrix
+    lfp r5, r6               ; number of blocks t orender
     add r6, r6, 1
-    add r3, r5, r6           # max value of pointer
+    add r3, r5, r6           ; max value of pointer
     jmp .L2
 .L4
-    lfp r7, r6                   # load block data. first 4 bits are the y coord (in blocks)
-    and r8, r7, 15               # extract y coord
-    sub r31, r8, r4              # check if its greater then y limit
-    jif neg, .L1                 # break from inner loop    
-    sub r31, r8, wall_y_blocks   # check if its less than base height
-    jif pos, .L3                 # skip draw
+    lfp r7, r6                   ; load block data. first 4 bits are the y coord (in blocks)
+    and r8, r7, 15               ; extract y coord
+    sub r31, r8, r4              ; check if its greater then y limit
+    jif neg, .L1                 ; break from inner loop    
+    sub r31, r8, wall_y_blocks   ; check if its less than base height
+    jif pos, .L3                 ; skip draw
     jmp .call_gpu
 .L3
     add r6, r6, r1
@@ -59,7 +59,7 @@ Render_Scene:
     jif neg, .L5
     jmp .update_screen
 .call_gpu
-    sub r7, r7, r1        # extract block id and store to port for gpu
+    sub r7, r7, r1        ; extract block id and store to port for gpu
     pst p2, r7
     sal 3, r10, r8
     sub r10, r10, wall_y_pixels
