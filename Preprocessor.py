@@ -45,4 +45,4 @@ def create_contex_tables(tokens) -> (list, dict):
         elif element[-1] == ':':
             defines.update({element[:-1]:line_count})
         i += 1
-    return code, defines, labels
+    return code, defines
