@@ -18,6 +18,7 @@
     curr_player_x, [4106]
 
 ; register names
+; mainly for when using imul to prevent confusion
 #define
     mxl, r30
     mxh, r31
