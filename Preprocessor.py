@@ -33,7 +33,7 @@ def create_contex_tables(tokens) -> (list, dict):
         if element[0] == '#':
             if element[1] == 'd':     #define
                 i += 1
-                while i < len(tokens) and tokens[i][0][-1] != ':':
+                while i < len(tokens) and tokens[i][0] != '#end':
                     defines.update({tokens[i][0]:tokens[i][1]})
                     i += 1
                 continue
