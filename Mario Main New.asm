@@ -7,7 +7,7 @@
 #define 
     player_x_vel,  [4096]    ; pixels/s
     player_y_vel,  [4097]    ; pixels/s
-    grouded,       [4098]    ; 1 = grounded, 0 = not grounded
+    grounded,       [4098]    ; 1 = grounded, 0 = not grounded
     wall_x_blocks, [4099]
     wall_y_blocks, [4100]
     wall_x_pixels, [4101]
@@ -15,14 +15,15 @@
     prev_player_x, [4103]    ; physics. collision detection
     prev_player_y, [4104]
     curr_player_x, [4105]
-    curr_player_x, [4106]
+    curr_player_y, [4106]
+#end
 
 ; register names
 ; mainly for when using imul to prevent confusion
 #define
     mxl, r30
     mxh, r31
-
+#end
 
 Main:
     cad grounded, r0, r0    ; set grounded
@@ -43,14 +44,14 @@ Input:
 .test_jump
     and r6, r5, 4
     xor r31, r6, 4
-    jmp z, .jump
+    jif z, .jump
     jmp .physics
 
 .left
     sub r1, r1, 1
-    jif pos .test_right
+    jif pos, .test_right
     sub r31, r1, 0b1111111111110111    ; -8
-    jif pos, test_right
+    jif pos, .test_right
     sub player_x_vel, r1, r31              ; x_vel less than -8 so set to -8
     jmp .test_right
 .right
@@ -58,9 +59,10 @@ Input:
     sub r31, r1, 8
     jif neg, .test_jump
     sub player_x_vel, r1, r31
-    jmp .test_update
+    jmp .test_jump
 .jump
-    and r31, grounded, 1
+    mov r31, grounded
+    and r31, r31, 1
     jif z, .physics
     mov r31, 8
     mov player_y_vel, r31
@@ -68,9 +70,10 @@ Input:
 
 .physics
     and r31, r5, 3
-    jif z .friction
+    jif z, .friction
 .?gravity
-    and r31, grounded, 1
+    mov r31, grounded
+    and r31, r31, 1
     jif z .gravity
     jmp .update
 
@@ -117,7 +120,7 @@ Collision:
     add r7, r7, 3648
     lfp r7, r7
     sub r0, r0, r7
-    jif n .resolve_collision
+    jif neg .resolve_collision
 
     add r1, r1, 6               ; bottom right corner
 
@@ -129,7 +132,7 @@ Collision:
     add r7, r7, 3648
     lfp r7, r7
     sub r0, r0, r7
-    jif n .resolve_collision
+    jif neg .resolve_collision
 
     add r2, r2, 7               ; top right corner
 
@@ -141,7 +144,7 @@ Collision:
     add r7, r7, 3648
     lfp r7, r7
     sub r0, r0, r7
-    jif n .resolve_collision
+    jif neg .resolve_collision
 
     sub r1, r1, 6               ; top left corner
 
@@ -153,12 +156,12 @@ Collision:
     add r7, r7, 3648
     lfp r7, r7
     sub r0, r0, r7
-    jif n .resolve_collision
+    jif neg .resolve_collision
 
     ; no collision so check if the player has crossed the wall boundry
     jmp Wall
 
-.resolve_collison        ; tbh i cant remember how this works exactly, but it does
+.resolve_collision        ; tbh i cant remember how this works exactly, but it does
     ; r1 has player corner x
     ; r2 has player corer y
     ; r10 = player_x previous
@@ -180,7 +183,7 @@ Collision:
     sub r0, r0, r14
     jif neg, .+x
     sub r0, r0, r15
-    jif neg, -x+y
+    jif neg, .-x+y
     add r12, r12, 7
     add r13, r13, 7
 
@@ -202,7 +205,7 @@ Collision:
     lfp r7, r7
     sub r0, r0, r7
     
-    jif n .resolve_x
+    jif neg .resolve_x
     mov r31, 1
     mov grounded, r31
     jmp .resolve_y
@@ -232,7 +235,7 @@ Collision:
     imul r21, r15
     sub r7, r11, mxl
 
-    jif n .-+bottom
+    jif neg .-+bottom
     
     sar 3, r7, r1
     add r7, r7, 256
@@ -264,7 +267,7 @@ Collision:
     jif neg, .+x+y
 .+x-y
     add r13, r13, 7
-    
+
     sub r20, r13, r10
     imul r20, r14
     mov r11, mxl
@@ -298,7 +301,7 @@ Collision:
     lfp r7, r7
     sub r0, r0, r7
 
-    jif n, .resolve_x
+    jif neg, .resolve_x
     mov r31, 1
     mov grounded, r31
     jmp .resolve_y
@@ -351,25 +354,25 @@ Collision:
     jmp Wall
 
 Wall:
-    mov r1, curr-player_x
+    mov r1, curr_player_x
     mov r2, wall_x_pixels
     sub r0, r1, r2
     jif neg, .left_wall
     add r3, r2, 33
     sub r0, r3, r1
-    jif neg, .update_wall
-    jmp .rend_scene
+    jif neg, .updt_wall
+    jmp Render_Scene
 .left_wall
     cad curr_player_x, r2, r0
     jmp .wall_block_updt
 .updt_wall
-    sub r32, r3, r1
+    sub r2, r3, r1
     add r2, r2, r4
     mov wall_x_pixels, r2
 
 .wall_block_updt
     sar 3, r2, r2
-    mov wall_x_blocks
+    mov wall_x_blocks, r2
     mov r3, curr_player_y
     sar 3, r3, r3
     mov wall_y_blocks, r3
@@ -426,4 +429,3 @@ Render_Scene:
     mov r31, 0b1100000000000000
     pst p1, r3
     ret
-
