@@ -1,309 +1,133 @@
 import json
 from time import perf_counter
 import sys
-import os
-import Preprocessor
-
-
-class Assembler:
-    def __init__(self, path, dest):
-        self.path = path
-        self.dest = dest
-        self.file = None
-        self.include = []
-        self.machine_file = []
-        self.flags = {'z':1,'nz':2,'c':4,'nc':8,'neg':16,'pos':32}
-        # zero, not zero, carry, no carry, negative, positive
-        self.regs = {'r0','r1','r2','r3','r4','r5','r6','r7','r8','r9','r10','r11','r12','r13','r14','r15','r16','r17','r18','r19','r20','r21','r22','r23','r24','r25','r26','r27','r28','r29','r30','r31','p0','p1','p2','p3'}
-
-    def lex(self, path):
-        tokens = Preprocessor.tokenise(path)
-        code, defines = Preprocessor.create_contex_tables(tokens)
-        self.file = File(code, defines)
-
-    @staticmethod
-    def file_path(file_name):
-        directory = os.getcwd()
-        path = os.path.join(directory , file_name)
-        return path
-
-    def combine_files(self):
-        with open("Joined.txt", "a") as target:
-            for file in self.include:
-                path = self.file_path(file)
-                with open(path, "r") as source:
-                    target.write(source.read() + "\n")
-
-    @staticmethod
-    def opcode_num(opcode):
-        opcodes = {'orr':0,'and':3,'xor':6,'nor':9,'nand':12,'add':15,'cad':19,'adc':22,'sub': 23,'bsb':27,'sbb': 28,'sar':29,'sal':34,'ror':39,'rol':40,'rcr':41,'rcl':42,'ldi':43,'jmp':44,'jif':45,'pst':46,'pld':47,'lod':48,'lfp':49,'str':50,'sfp':51,'pop':52,'psh':53,'cwd':54,'imul':55,'cmb':56,'movsx':57,'call':58,'ret':59,'hlt':63}
-        return opcodes.get(opcode)
-
-    @staticmethod
-    def expected_op_number(opcode):
-        expected_ops = {'mov':2,'orr':3,'and':3,'xor':3,'nor':3,'nand':3,'add':3,'cad':3,'adc':3,'sub': 3,'bsb':3,'sbb': 3,'sar':3,'sal':3,'ror':2,'rol':2,'rcr':2,'rcl':2,'jmp':1,'jif':2,'pst':2,'pld':2,'lod':2,'lfp':2,'str':2,'sfp':2,'pop':1,'psh':1,'cwd':2,'imul':2,'cmb':3,'movsx':2,'call':1,'ret':0,'hlt':0}
-        return expected_ops.get(opcode)
-
-    @staticmethod
-    def valid_op_maps(opcode):
-        op_maps = {
-            'orr': {'rrr','rri','rrm','rmr'},
-            'and': {'rrr','rri','rrm','rmr'},
-            'xor': {'rrr','rri','rrm','rmr'},
-            'nor': {'rrr','rri','rrm','rmr'},
-            'nand': {'rrr','rri','rrm','rmr'},
-            'add': {'rrr','rri','rir','rmr','rrm','mrr'},
-            'cad': {'rrr','rmr','rrm','mrr'},
-            'adc': {'rrr'},
-            'sub': {'rrr','rri','rrm','mrr'},
-            'bsb': {'rrr'},
-            'sbb': {'rrr'},
-            'sar': {'irr'},
-            'sal': {'irr'},
-            'ror': {'rr'},
-            'rol': {'rr'},
-            'rcr': {'rr'},
-            'rcl': {'rr'},
-            'jmp': {'i'},
-            'jif': {'ii'},
-            'pst': {'rr'},
-            'pld': {'rr'},
-            'lpf': {'rr'},
-            'mov': {'rr','ri','mr','rm'},
-            'str': {'mr'},
-            'sfp': {'rr'},
-            'pop': {'r'},
-            'psh': {'r'},
-            'cwd': {'rr'},
-            'imul': {'rr'},
-            'cmb': {'rrr'},
-            'mosx': {'rr'},
-            'call': {'i'},
-            'ret': {''},
-            'hlt': {''}
-        }
-        return op_maps.get(opcode)
-
-    @staticmethod
-    def to_int(number: str) -> int:
-        num_type = number[:2]
-        if num_type == "0b":
-            return(int(number, base = 2))
-        elif num_type == "0x":
-            return(int(number, base = 16))
-        elif num_type == "0o":
-            return(int(number, base = 8))
-        else: 
-            return(int(number))
-
-    def print_binery_output(self):
-        for i in range(0, len(self.machine_file) - 1, 2):
-            low16 = bin(self.machine_file[i][1])[2:]
-            prettylow16 = (16 - len(low16))*'0' + low16
-            high16 = bin(self.machine_file[i+1][1])[2:]
-            prettyhigh16 = (16 - len(high16))*'0' + high16
-            print(f'{i >> 1}: {prettylow16} : {self.machine_file[i][1]}, {prettyhigh16}: {self.machine_file[i+1][1]}')
-
-    @staticmethod
-    def Error1(line_num, strline, error):
-        sys.exit(f"{'-'*50}\nAssembly failed in Line {line_num}:\n\n    {strline}\n\n{error}\n{'-'*50}")
-
-    @staticmethod
-    def Error2(line_num, strline, newstrline, error):
-        sys.exit(f"{'-'*50}\nAssembly failed in Line {line_num}:\n\n    {strline}\n -> {newstrline}\n\n{error}\n{'-'*50}")
-
-    def translate_to_machine_code(self):
-        for line_num, line in enumerate(self.file.code):
-            machine_word_1 = 0
-            machine_word_2 = 0
-            opcode = line[0].lower()
-            strline = opcode + " " + ", ".join(line[1:])
-            expected = self.expected_op_number(opcode)
-            op_number = len(line) - 1
-
-            # check the line has the correct number of operands
-            
-            if expected == None:
-                self.Error1(line_num, strline, f"Error: Opcode \'{opcode}\' could not be resolved.")
-            elif expected != op_number:
-                if expected > op_number:
-                    self.Error1(line_num, strline, f"Error: Missing arguments. \'{opcode}\' expected {expected}, got {op_number}.")
-                else:
-                    self.Error1(line_num, strline, f"Error: Too many arguments. \'{opcode}\' expected {expected}, got {op_number}.")
-            
-            interpreted = []
-            op_map = ''
-            new = []
-            bswp = False
-
-            # go through and replace any arguments with their definition
-            # then record information about the type of operands passed
-            # translate operand into a number in preperation to be combined into machine code
-            
-            for k, operand in enumerate(line[1:]):
-                definition = self.file.defines.get(operand)
-                new_operand = ''
-                if definition == None:
-                    new_operand = operand
-                else:
-                    new_operand = definition
-
-                new.append(str(new_operand))
-
-                if new_operand in self.regs:
-                    interpreted.append(int(new_operand[1:]))
-                    op_map += 'r'
-                    continue
-                elif type(new_operand) == int:
-                    interpreted.append(new_operand)
-                    op_map += 'i'
-                    continue
-                elif new_operand[0] in {'0','1','2','3','4','5','6','7','8','9'}:
-                    try:
-                        interpreted.append(self.to_int(new_operand))
-                        op_map += 'i'
-                        continue
-                    except:
-                        self.Error1(line_num, strline, f"Error: Operand \'{operand}\' could not be resolved.")
-                elif new_operand[0] == '[' and new_operand[-1] == ']':
-                    if k == 0:
-                        bswp = True
-                    try:
-                        interpreted.append(self.to_int(new_operand[1:-1]))
-                        op_map += 'm'
-                        continue
-                    except:
-                        self.Error1(line_num, strline, f"Error: Operand \'{operand}\' could not be resolved.")
-                else:
-                    resolution = self.flags.get(new_operand)
-                    if resolution:
-                        interpreted.append(resolution)
-                        op_map += 'i'
-                        continue
-                    self.Error1(line_num, strline, f"Error: Operand \'{operand}\' could not be resolved.")
-
-            newstrline = opcode + ' ' + ', '.join(new)
-            # checck operands given are legal
-
-            valid_maps = self.valid_op_maps(opcode)
-            if op_map not in valid_maps:
-                self.Error2(line_num, strline, newstrline, f"Error: operands given are not valid.")
-
-            # calculate opcode based on the operand map
-            start = 0
-
-            if opcode in {'orr', 'and', 'xor', 'nor', 'nand', 'add', 'cad', 'sub', 'bsb'}:
-                if op_map[0] == 'm':
-                    if opcode == 'cad':
-                        machine_word_1 += (self.opcode_num(opcode) + 2) << 10
-                    else:
-                        machine_word_1 += (self.opcode_num(opcode) + 3) << 10
-                elif op_map[1] == 'i' or op_map[2] == 'i':
-                    machine_word_1 += (self.opcode_num(opcode) + 1) << 10
-                elif op_map[1] == 'm' or op_map[2] == 'm':
-                    machine_word_1 += (self.opcode_num(opcode) + 2) << 10
-                else:
-                    machine_word_1 += self.opcode_num(opcode) << 10
-            elif opcode in {'sar', 'sal'}:
-                if interpreted[0] not in {1,2,3,4,8}: self.Error2(line_num, strline, newstrline, f"Error: shifting by: \'{interpreted[0]}\' bits is not supported.\nYou may only shift by: 1,2,3,4 or 8 bits at a time.")
-                if interpreted[0] == 8:
-                    machine_word_1 += (self.opcode_num(opcode) + 4) << 10
-                else:
-                    machine_word_1 += (self.opcode_num(opcode) + interpreted[0] - 1) << 10
-                interpreted.pop(0)
-                op_map = 'rr'
-            elif opcode == 'mov':
-                if op_map == 'rr':
-                    pass                    # nothing occurs as mov reg reg is the same as an orr instructions which has opcode 0
-                elif op_map == 'ri':
-                    machine_word_1 += 1024  # ori
-                elif op_map == 'mr':
-                    machine_word_1 += self.opcode_num('str') << 10
-                    start = 1
-                elif op_map == 'rm':
-                    machine_word_1 += self.opcode_num('lod') << 10
-            elif opcode == 'jif':
-                machine_word_1 += self.opcode_num('jif') << 10
-                machine_word_1 += interpreted[0] << 4
-                interpreted.pop(0)
-                op_map = 'i'
-                pass
-            else:   
-                machine_word_1 += self.opcode_num(opcode) << 10
-
-            for indx, char in enumerate(op_map):
-                if char == 'i' or char == 'm':
-                    machine_word_2 = interpreted[indx]
-                    op_map = op_map.replace(char, '')
-                    interpreted.pop(indx)
-                    break
-
-            if bswp:
-                temp = interpreted[1]
-                interpreted[1] = interpreted[0]
-                interpreted[0] = temp
-
-            if opcode in {'str','sfp','psh','imul'}:
-                start = 1
-
-            for indx, op in enumerate(interpreted):
-                if (start + indx) >= 2:
-                    machine_word_2 += op << 11
-                else:
-                    if (indx + start) == 0:
-                        machine_word_1 += op << 5
-                    else:
-                        machine_word_1 += op            
-
-            self.machine_file.append([line_num*2, machine_word_1])
-            self.machine_file.append([(line_num*2) + 1, machine_word_2])
-
-    def Assemble(self):
-        tokens = Preprocessor.tokenise(self.path)
-        self.include = Preprocessor.search_includes(tokens)
-        with open("Joined.txt", "w") as target:
-            with open(self.path, "r") as main:
-                target.write(main.read() + "\n\n")
-        # merge included files into one files for assembly
-        if self.include != []:
-            self.combine_files()
-        #preprocess main file
-        self.lex(self.file_path("Joined.txt"))
-        # convert to machhine code
-        self.translate_to_machine_code()
-        with open (self.dest, 'w') as f:
-            json.dump(self.machine_file, f)
-        # write binery to file to check if correct
-        # tempororay
-        with open ("bin.txt", 'w') as f:
-            for i in range(0, len(self.machine_file) - 1, 2):
-                low16 = bin(self.machine_file[i][1])[2:]
-                prettylow16 = ((16 - len(low16))*'0' + low16)
-                high16 = bin(self.machine_file[i+1][1])[2:]
-                prettyhigh16 = (16 - len(high16))*'0' + high16
-                f.write(f'{prettylow16} : {self.machine_file[i][1]}, {prettyhigh16}: {self.machine_file[i+1][1]}\n')
-        
-        #self.print_binery_output()
-        print(f"Assembly finished with no errors.")    
-        print(f"Size = {len(self.machine_file) * 2} bytes, {len(self.machine_file)} words, {len(self.machine_file) >> 1} instructions")
-
-
-class File:
-    def __init__(self, code = [], defines = {}) -> None:
-        self.code = code
-        self.defines = defines 
 
 def Timer(func) -> None:
     def wrapper(*args, **kwargs):
         start = perf_counter()
         func(*args, **kwargs)
         diff = perf_counter() - start
-        print(f'Function {func.__name__} took {diff*1000:.4f}ms')
+        print(f'{func.__name__} took {diff*1000:.5f}ms')
     return(wrapper)
 
-@Timer
-def main():
-    A = Assembler(path = "C:\\Users\\squas\\VS\SM CPU\\Assmebler_programs\Test.txt", dest = "C:\\Program Files (x86)\\Steam\\steamapps\\workshop\\content\\387990\\2817316401\\data.json")
-    A.Assemble()
+def tokenise(path) -> list:
+    with open(path, 'r') as f:
+        Tokenised = []
+        for line in f:
+            tokens = []
+            temp = ''
+            for char in line:
+                if char == '#' or char == ';': break
+                if char not in {' ', ',','\n'}:
+                    temp += char
+                else:
+                    if temp:
+                        tokens.append(temp)
+                        temp = ''
+            if temp: tokens.append(temp)
+            if tokens: Tokenised.append(tokens)
+    #print(Tokenised)
+    return(Tokenised)
 
-main()
+def log_labels(Code) -> tuple[dict, list]:
+    # takes the tokenised form
+    labels = {}
+    for index, line in enumerate(Code):
+        if line[0][0] == '.':
+            labels.update({line[0]: index})
+            Code[index].remove(line[0])
+    #print(labels)
+    return(labels, Code)
+
+def to_int(number: str) -> int:
+    num_type = number[:2]
+    if num_type == "0b":
+        return(int(number, base = 2))
+    elif num_type == "0x":
+        return(int(number, base = 16))
+    elif num_type == "0o":
+        return(int(number, base = 8))
+    elif type(number) == float:
+        raise TypeError
+    else:
+        return(int(number))
+
+def get_opcode(op) -> int:
+    opcodes = {'ORR':0,'MOV':0,'AND':1,'XOR':2,'NAND':3,'NOR':4,'ADD':5,'ADC':6,'FAD':7,'SUB':8,'SBC':9,'FSB':10,'LSH':11,'RSH':12,'ROL':13,'ROR':14,'RCL':15,'RCR':16,'CMP':17,'LPC':18,'LDI':19,'JMP':20,'JTP':21,'JIF':22,'PST':23,'PLD':24,'LOD':25,'LFP':26,'STR':27,'SFP':28,'PSH':29,'POP':30,'HLT':31}
+    return(opcodes.get(op) << 19)
+
+@Timer
+def Assemble(asm_path: str = "", dest: str = '') -> None:
+    tokens = tokenise(asm_path)
+    labels, Code = log_labels(tokens)
+
+    data = [] # 2d array of [address, data] pairs
+    location = 0 # address
+    for line_num, line in enumerate(Code):
+        #print(line)
+        Machine_Code = 0
+        opcode = line[0].upper()
+        Machine_Code += get_opcode(opcode)
+        # Destination in first arg
+        if opcode in {'ORR','AND','XOR','NAND','NOR','MOV','ADD','ADC','FAD','SUB','SBC','FSB','LSH','RSH','ROL','ROR','RCL','RCR','LPC','LDI','PST','PLD','LOD','LFP','POP'}:
+            Machine_Code += int(line[1][-1]) << 16
+        # regA in second
+        if opcode in {'ORR','AND','XOR','NAND','NOR','MOV','ADD','ADC','FAD','SUB','SBC','FSB','LSH','RSH','ROL','ROR','RCL','RCR','PST','PLD','LFP'}:
+            Machine_Code += int(line[2][-1]) << 13
+        # regB in third
+        if opcode in {'ORR','AND','XOR','NAND','NOR','ADD','ADC','FAD','SUB','SBC','FSB'}:
+            Machine_Code += int(line[3][-1]) << 10
+        # regA first
+        if opcode in {'CMP','JTP','SFP'}:
+            Machine_Code += int(line[1][-1]) << 13
+        # regB second
+        if opcode in {'CMP','SFP'}:
+            Machine_Code += int(line[2][-1]) << 10
+        # PSH requires data in b reg
+        if opcode == "PSH":
+            Machine_Code += int(line[-1][-1]) << 10
+        # Store using special immediate
+        if opcode == 'STR':
+            Machine_Code += int(line[1][-1]) << 10
+            s_imm = list(bin(to_int(line[2])))
+            s_imm = s_imm[2:]
+            if len(s_imm) < 16:
+                s_imm = ['0' for i in range(16 - len(s_imm))] + s_imm
+            imm = ['0', 'b'] + s_imm[:6] + ['0', '0', '0'] + s_imm[6:]
+            str_si = ''
+            for i in imm: str_si += i
+            int_si = int(str_si, base = 0)
+            Machine_Code += int_si
+        # Jump type with immeditate
+        if opcode in {'JMP','JIF'}:
+            if line[-1][0] == '.':
+                Machine_Code += labels.get(line[-1])
+            elif line[-1][0] in {'+', '-'}:
+                Machine_Code += line_num + int(line[-1])
+            else:
+                Machine_Code += to_int(line[1])
+        #other immeditates
+        if opcode in {'LDI','LOD'}:
+            Machine_Code += to_int(line[-1])
+        # JIF deal
+        if opcode == 'JIF':
+            Flags = ['z','n','c','gr','le','neq']
+            if line[1].lower() in Flags:
+                Machine_Code += (Flags.index(line[1].lower()) + 1) << 16
+            else:
+                print("Assembly failed")
+                print('-'*50+'\n'+'\''+line[1]+'\'','isnt recognised as a flag\ntry a flag out of:',Flags,'\n','-'*50)
+                sys.exit(1)
+
+        data.append([location, Machine_Code])
+        location += 1
+
+    print(f'\ncode is {len(tokens)} lines long\n')
+
+    with open(dest, 'w') as f:
+        json.dump(data, f) # write to the json file
+
+if __name__ == "__main__":
+    assembly_code_path = "C:\\Users\\squas\\VS\\SM CPU\\Tic Tac Toe.txt"
+    destination_file = "C:\\Program Files (x86)\\Steam\\steamapps\\workshop\\content\\387990\\2817316401\\data.json"
+    Assemble(asm_path = assembly_code_path, dest = destination_file)
