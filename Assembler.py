@@ -1,3 +1,5 @@
+# for the old cpu (neobium) only
+
 import json
 from time import perf_counter
 import sys
